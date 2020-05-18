@@ -1,4 +1,5 @@
 const config = require("../config/config");
+const request = require("request");
 
 function sendOTP(phone, otp) {
   const message = "Hi, Your O.T.P is " + otp;
@@ -28,6 +29,7 @@ function sendSMS(phone, message) {
     },
   };
   request(clientServerOptions, function (error, response) {
+    console.log(response);
     return;
   });
 }
