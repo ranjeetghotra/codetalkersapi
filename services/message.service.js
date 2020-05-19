@@ -29,7 +29,6 @@ function sendSMS(phone, message) {
     },
   };
   request(clientServerOptions, function (error, response) {
-    console.log(response);
     return;
   });
 }

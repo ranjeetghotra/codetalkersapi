@@ -2,7 +2,7 @@ var passport = require("passport");
 var LocalStrategy = require("passport-local").Strategy;
 var mongoose = require("mongoose");
 var User = mongoose.model("User");
-const Auth = require("../services/auth.service");
+const messageService = require("../services/message.service"); // Message service
 
 passport.use(
   new LocalStrategy(
@@ -31,10 +31,11 @@ passport.use(
           }
           // Check phone verified or not
           if (!user.phoneVerified) {
-            // Auth.generatePhoneOtp(user)
+            messageService.sendOTP(user.phone, user.phoneOtp);
             return done(null, false, {
               status: false,
-              otp: true,
+              phoneVerified: 'pending',
+              phone: user.phone,
               message: "Phone not verified",
             });
           }
@@ -42,7 +43,6 @@ passport.use(
           if (!user.isActive) {
             return done(null, false, {
               status: false,
-              otp: true,
               message: "Account not Activated",
             });
           }

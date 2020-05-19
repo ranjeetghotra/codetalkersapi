@@ -36,7 +36,7 @@ module.exports.login = function (req, res, next) {
 };
 
 // Register Function
-module.exports.register = function (req, res) {
+module.exports.register = async function (req, res) {
   // Check and return if validation error exists
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -47,6 +47,15 @@ module.exports.register = function (req, res) {
     });
   }
   try {
+    let isEmailExist = await User.findOne({ email: req.body.email});
+    let isPhoneExist = await User.findOne({ phone: req.body.phone});
+
+    if(isEmailExist){
+      return res.status(200).json({ status: false, message: 'Email already exist' });
+    }
+    if(isPhoneExist){
+      return res.status(200).json({ status: false, message: 'Phone already exist' });
+    }
     // create user instance from user Model
     var user = new User({
       firstName: req.body.firstName,
@@ -65,11 +74,11 @@ module.exports.register = function (req, res) {
 
     // sent otp to user
     user.save(function (err) {
-      // messageService.sendOTP(user.phone, user.phoneOtp);
+      messageService.sendOTP(user.phone, user.phoneOtp);
       res.status(200).json({ status: true });
     });
   } catch (err) {
-    res.status(200).json({ status: false, message: err.message });
+    res.status(500).json({ status: false, message: err.message });
   }
 };
 
@@ -91,9 +100,10 @@ module.exports.phoneVerify = async function (req, res) {
       user.phoneOtp = "";
       user.phoneVerified = true;
       user.save();
+      token = user.generateJwt();
       return res
         .status(200)
-        .json({ status: true, message: "OTP Verified" });
+        .json({ status: true, token, message: "OTP Verified" });
     } else {
       res.status(200).json({ status: false, message: "OTP not Matched" });
     }

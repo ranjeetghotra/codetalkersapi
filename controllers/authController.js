@@ -12,7 +12,7 @@ const auth = require("../services/auth.service");
 router.post("/login",[
     check('user').trim().isLength({ min: 3 }),
     check('password').trim().isLength({ min: 5 }),
-  ],auth.register);
+  ],auth.login);
 
 // Register Route
 router.post("/register",[
