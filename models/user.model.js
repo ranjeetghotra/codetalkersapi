@@ -39,6 +39,18 @@ var userSchema = new mongoose.Schema({
   organisationDetails: {
     type: String,
   },
+  googleId: {
+    type: String,
+    unique: true
+  },
+  facebookId: {
+    type: String,
+    unique: true
+  },
+  twitterId: {
+    type: String,
+    unique: true
+  },
   registerationDateTime: {
     type: Date,
     default: new Date(),

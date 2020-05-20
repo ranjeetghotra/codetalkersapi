@@ -14,6 +14,14 @@ router.post("/login",[
     check('password').trim().isLength({ min: 5 }),
   ],auth.login);
 
+// Social Login Route
+router.post("/social",[
+    check('firstName').trim().isLength({ min: 1 }),
+    check('lastName').trim().isLength({ min: 1 }),
+    check('idToken').trim().isLength({ min: 1 }),
+    check('provider').trim().isLength({ min: 1 })
+  ],auth.socialLogin);
+
 // Register Route
 router.post("/register",[
     check('firstName').trim().isLength({ min: 3 }),
