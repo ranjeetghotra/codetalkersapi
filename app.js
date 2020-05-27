@@ -8,6 +8,7 @@ const passport = require('passport');
 
 // Load Controllers
 const authController = require("./controllers/authController.js");
+const twitterController = require("./controllers/twittercontroller");
 
 const app = express();
 const port = 3000;
@@ -24,6 +25,7 @@ require('./config/passport');
 // Route Configration
 app.get('/', (req, res) => res.send('Hello World!'));
 app.use("/auth", authController);
+app.use("/twitter", twitterController);
 
 // Start Application
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`));

@@ -34,10 +34,12 @@ var userSchema = new mongoose.Schema({
     type: String,
   },
   userAddress: {
-    type: String,
+    type: Array,
+    default: []
   },
   organisationDetails: {
-    type: String,
+    type: Array,
+    default: []
   },
   googleId: {
     type: String,

@@ -1,3 +1,6 @@
+const nodeMailer = require("nodemailer");
+var ejs = require('ejs');
+var fs = require('fs');
 const config = require("../config/config");
 const request = require("request");
 
@@ -33,32 +36,46 @@ function sendSMS(phone, message) {
   });
 }
 
-function sendMail(to, message, subject = 'CodeTalkers') {
-    let transporter = nodeMailer.createTransport({
-      // Mail hoster
-      host: config.mail.host,
-      port: config.mail.port,
-      secure: config.mail.secure,
-      auth: {
-        // Sender's account
-        user: config.mail.username,
-        pass: config.mail.password,
-      },
-    });
-    let mailOptions = {
-      // Recipient's account
-      from: '"CodeTalkers "'+config.mail.username, // sender address
-      to: to,
-      subject: subject,
-      html: message // plain text body
-    };
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        return;
-      }
-    });
+function sendMail(to, message, subject = "CodeTalkers") {
+  // Nodemailer email transporter
+  let transporter = nodeMailer.createTransport({
+    // Mail hoster
+    host: config.mail.host,
+    port: config.mail.port,
+    secure: config.mail.secure,
+    auth: {
+      // Sender's account
+      user: config.mail.username,
+      pass: config.mail.password,
+    },
+  });
+  let mailOptions = {
+    // Recipient's account
+    from: '"CodeTalkers "' + config.mail.username, // sender address
+    to: to,
+    subject: subject,
+    html: message, // plain text body
+  };
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      return;
+    }
+  });
+}
+
+function welcomeMail(user) {
+  templateData = {
+    name: user.firstName,
+    siteUrl: config.siteUrl,
+    baseUrl: config.baseUrl
   }
+  var template = fs.readFileSync('templates/email/account_welcome.html',{encoding:'utf-8'});
+  var message = ejs.render(template, templateData);
+  var subject = 'Thamks for signup';
+  sendMail(user.email , message, subject);
+}
 
 module.exports.sendOTP = sendOTP;
 module.exports.sendSMS = sendSMS;
 module.exports.sendMail = sendMail;
+module.exports.welcomeMail = welcomeMail;

@@ -135,6 +135,7 @@ module.exports.register = async function (req, res) {
     // sent otp to user
     user.save(function (err) {
       messageService.sendOTP(user.phone, user.phoneOtp);
+      messageService.welcomeMail(user);
       res.status(200).json({ status: true });
     });
   } catch (err) {
