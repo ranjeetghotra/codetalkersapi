@@ -1,5 +1,5 @@
 const passport = require("passport");
-
+const randomstring = require("randomstring");
 const messageService = require("./message.service"); // Message service
 const User = require("../models/user.model"); // Message service
 const { check, validationResult } = require("express-validator");
@@ -173,6 +173,69 @@ module.exports.phoneVerify = async function (req, res) {
     }
   } catch (err) {
     res.status(200).json({ status: false, message: err.message });
+  }
+};
+
+// Password reset request
+module.exports.forgotPassword = async function (req, res) {
+  // Check and return if validation error exists
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      status: false,
+      message: "check input values",
+      errors: errors.array(),
+    });
+  }
+  try {
+    // create user instance from user Model
+    var user = await User.findOne({
+      email: req.body.user
+    });
+    if (user) {
+      user.passwordResetCode = randomstring.generate();
+      user.save();
+      messageService.forgotPasswordMail(user);
+      return res
+        .status(200)
+        .json({ status: true, message: "Password reset link has been sent to your email" });
+    } else {
+      res.status(200).json({ status: false, message: "Account not found" });
+    }
+  } catch (err) {
+    res.json({ status: false, message: err.message });
+  }
+};
+
+// Reset password
+module.exports.resetPassword = async function (req, res) {
+  // Check and return if validation error exists
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).json({
+      status: false,
+      message: "check input values",
+      errors: errors.array(),
+    });
+  }
+  try {
+    // create user instance from user Model
+    var user = await User.findOne({
+      passwordResetCode: req.body.resetCode,
+      $or:[{email: req.body.user}, {phone: req.body.user }]
+    });
+    if (user) {
+      user.passwordResetCode = '';
+      user.setPassword(req.body.password);
+      user.save();
+      return res
+        .status(200)
+        .json({ status: true, message: "Password reset successfully" });
+    } else {
+      res.status(200).json({ status: false, message: "Account not found" });
+    }
+  } catch (err) {
+    res.json({ status: false, message: err.message });
   }
 };
 

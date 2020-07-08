@@ -63,6 +63,7 @@ function sendMail(to, message, subject = "CodeTalkers") {
   });
 }
 
+// New signup welcome
 function welcomeMail(user) {
   templateData = {
     name: user.firstName,
@@ -75,7 +76,20 @@ function welcomeMail(user) {
   sendMail(user.email , message, subject);
 }
 
+// send password reset link
+function forgotPasswordMail(user) {
+  templateData = {
+    name: user.firstName,
+    resetLink: config.siteUrl + 'auth/reset-password/'+ user.passwordResetCode,
+  }
+  var template = fs.readFileSync('templates/email/account_password_reset.html',{encoding:'utf-8'});
+  var message = ejs.render(template, templateData);
+  var subject = 'Thamks for signup';
+  sendMail(user.email , message, subject);
+}
+
 module.exports.sendOTP = sendOTP;
 module.exports.sendSMS = sendSMS;
 module.exports.sendMail = sendMail;
 module.exports.welcomeMail = welcomeMail;
+module.exports.forgotPasswordMail = forgotPasswordMail;

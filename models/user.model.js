@@ -73,6 +73,10 @@ var userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  passwordResetCode: {
+    type: String,
+    default: ''
+  },
   hash: String,
   salt: String,
 });
