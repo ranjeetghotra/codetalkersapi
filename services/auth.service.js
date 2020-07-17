@@ -1,7 +1,7 @@
 const passport = require("passport");
 const randomstring = require("randomstring");
 const messageService = require("./message.service"); // Message service
-const User = require("../models/user.model"); // Message service
+const User = require("../models/user.model"); // User Model
 const { check, validationResult } = require("express-validator");
 
 // Login Function

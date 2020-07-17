@@ -1,7 +1,7 @@
 var config = {};
 
-config.baseUrl = 'http://localhost:3000/' // API base url
-config.siteUrl = 'http://localhost:4200/' // Website url
+config.baseUrl = 'http://api.thecodefusion.com:3000/' // API base url
+config.siteUrl = 'http://management.thecodefusion.com:4200/' // Website url
 
 // Database configration
 config.db = { connenction: "mongodb://localhost:27017/codetalkers" };

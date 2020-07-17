@@ -72,7 +72,7 @@ function welcomeMail(user) {
   }
   var template = fs.readFileSync('templates/email/account_welcome.html',{encoding:'utf-8'});
   var message = ejs.render(template, templateData);
-  var subject = 'Thamks for signup';
+  var subject = 'Thanks for signup';
   sendMail(user.email , message, subject);
 }
 
@@ -84,7 +84,7 @@ function forgotPasswordMail(user) {
   }
   var template = fs.readFileSync('templates/email/account_password_reset.html',{encoding:'utf-8'});
   var message = ejs.render(template, templateData);
-  var subject = 'Thamks for signup';
+  var subject = 'Reset Password';
   sendMail(user.email , message, subject);
 }
 
