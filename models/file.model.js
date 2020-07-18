@@ -8,13 +8,16 @@ var fileSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
-  orignalName: {
+  originalName: {
     type: String,
   },
   fileName: {
     type: String,
   },
   mimeType: {
+    type: String,
+  },
+  type: {
     type: String,
   },
   encoding: {

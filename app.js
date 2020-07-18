@@ -10,10 +10,6 @@ const bodyParser = require("body-parser");
 const https = require("https");
 const fs = require("fs");
 
-
-const multer = require('multer');
-const upload = multer({ dest: 'uploads'});
-
 /*
 const options = {
   key: fs.readFileSync("./security/server.key"),
@@ -55,7 +51,7 @@ require("./config/passport");
 // Route Configration
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/auth", authController);
-app.use("/file", upload.single('file') , fileController);
+app.use("/file", fileController);
 app.use("/twitter", twitterController);
 
 // Start Application
