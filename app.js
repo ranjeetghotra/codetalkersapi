@@ -10,11 +10,12 @@ const bodyParser = require("body-parser");
 const https = require("https");
 const fs = require("fs");
 
-
+/*
 const options = {
   key: fs.readFileSync("./security/server.key"),
   cert: fs.readFileSync("./security/server.crt"),
 };
+*/
 
 // Load Controllers
 const authController = require("./controllers/authController.js");
@@ -55,14 +56,14 @@ app.use("/file", fileController);
 app.use("/twitter", twitterController);
 
 // Start Application
-/*
+
 var server = app.listen(port, () =>
   console.log(
     `listening at http://${server.address().address}:${server.address().port}`
   )
-);*/
-
+);
+/*
 https.createServer(options, app).listen(port, () =>
 console.log(`Example app listening at http://localhost:${port}`)
 );
-
+*/

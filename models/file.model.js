@@ -11,28 +11,18 @@ var fileSchema = new mongoose.Schema({
   originalName: {
     type: String,
   },
-  fileName: {
+  fileId: {
     type: String,
   },
-  mimeType: {
+  filename: {
     type: String,
   },
   type: {
     type: String,
   },
-  encoding: {
-    type: String,
-  },
-  destination: {
-    type: String,
-  },
   fileTree: {
     type: String,
     default: ''
-  },
-  size: {
-    type: Number,
-    default: 0,
   },
   createdAt: {
     type: Date,
