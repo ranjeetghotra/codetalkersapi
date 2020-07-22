@@ -10,6 +10,8 @@ const bodyParser = require("body-parser");
 const https = require("https");
 const fs = require("fs");
 
+
+const config = require("./config/config");
 /*
 const options = {
   key: fs.readFileSync("./security/server.key"),
@@ -20,6 +22,7 @@ const options = {
 // Load Controllers
 const authController = require("./controllers/authController.js");
 const fileController = require("./controllers/fileController.js");
+const downloadController = require("./controllers/downloadController.js");
 const twitterController = require("./controllers/twittercontroller");
 
 const app = express();
@@ -40,6 +43,14 @@ app.use(
   })
 );
 
+// verify user token
+var jwt = require('express-jwt');
+var auth = jwt({
+  secret: config.jwt.secret,
+  userProperty: 'payload',
+  algorithms: ['HS256']
+});
+
 // for parsing multipart/form-data
 // app.use(upload.array());
 // app.use(express.static("public"));
@@ -52,9 +63,15 @@ require("./config/passport");
 // Route Configration
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/auth", authController);
-app.use("/file", fileController);
+app.use("/file", auth, fileController);
+app.use("/download", downloadController);
 app.use("/twitter", twitterController);
 
+app.use(function (err, req, res, next) {
+  if (err.name === 'UnauthorizedError') {
+    res.send({status: false, tokenInvalid: true, message: 'invalid token...'});
+  }
+});
 // Start Application
 
 var server = app.listen(port, () =>

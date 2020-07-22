@@ -11,7 +11,7 @@ const file = require("../services/file.service");
 router.post("/upload", gfs.upload.single('file'), file.upload);
 router.get("/recent", file.recent);
 router.post("/explore", file.explore);
-router.get("/link/:filename", file.link);
+router.post("/link/:id", file.link);
 router.post("/type", file.type);
 router.post("/delete/:id", file.delete);
 module.exports = router;

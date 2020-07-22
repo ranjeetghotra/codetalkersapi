@@ -2,7 +2,9 @@ const File = require("../models/file.model"); // File Model
 const path = require("path");
 const fs = require("fs");
 const mongoose = require("mongoose");
+const jwt = require('jsonwebtoken');
 const gfs = require("../config/gfs");
+const config = require("../config/config");
 // upload single file
 module.exports.upload = async function (req, res, next) {
   try {
@@ -95,7 +97,7 @@ module.exports.type = async function (req, res, next) {
 };
 
 // Direct link for file
-module.exports.link = async function (req, res, next) {
+module.exports.link2 = async function (req, res, next) {
   try {
     mediaAction = req.query.media == "download" ? "attachment" : "inline";
     file = await File.findOne({ user: "0", _id: req.params.id });
@@ -125,20 +127,62 @@ module.exports.link = async function (req, res, next) {
   }
 };
 
+// Direct link for file
+module.exports.link = async function (req, res, next) {
+  try {
+    file = await File.findById(req.params.id); // Find file by id
+    if (!file) { // check if file exist or not
+      return res.status(404).json({
+        status: false,
+        message: "no files exist",
+      });
+    } else if (file.user !== "0") { // check user
+      return res.status(404).json({
+        status: false,
+        message: "Access Denied",
+      });
+    } else {
+      gfs.gfs
+        .find(new mongoose.Types.ObjectId(file.fileId))
+        .toArray((err, files) => {
+          if (!files || files.length === 0) {
+            return res.status(404).json({
+              status: false,
+              message: "no files exist",
+            });
+          } else {
+            const secret = config.jwt.secret;
+            const token = jwt.sign({ user: "0", id: req.params.id }, secret, {
+              expiresIn: 1000 * 60 * 60,
+            });
+            const link = config.baseUrl + "download/file?token=" + encodeURIComponent(token);
+            return res.json({ status: true, link });
+          }
+        });
+    }
+  } catch (err) {
+    console.log(err.message);
+    res.send({ status: false, message: err.message });
+  }
+};
+
 // delete file or Directory
 module.exports.delete = async function (req, res, next) {
   try {
     file = await File.findById(req.params.id);
     if (file) {
       if (file.isFile) {
-        gfs.gfs.delete(new mongoose.Types.ObjectId(file.fileId), (err, data) => {
-          if (err) {
-            return res
-              .status(404)
-              .json({ status: false, message: err.message });
+        gfs.gfs.delete(
+          new mongoose.Types.ObjectId(file.fileId),
+          (err, data) => {
+            if (err) {
+              return res
+                .status(404)
+                .json({ status: false, message: err.message });
+            }
+            file.remove();
           }
-          file.remove();
-        });
+        );
       } else {
         files = await File.find({
           fileTree: (file.fileTree + "/" + file.originalName).replace(
@@ -147,14 +191,17 @@ module.exports.delete = async function (req, res, next) {
           ),
         });
         files.forEach((element) => {
-          gfs.gfs.delete(new mongoose.Types.ObjectId(element.fileId), (err, data) => {
-            if (err) {
-              return res
-                .status(404)
-                .json({ status: false, message: err.message });
+          gfs.gfs.delete(
+            new mongoose.Types.ObjectId(element.fileId),
+            (err, data) => {
+              if (err) {
+                return res
+                  .status(404)
+                  .json({ status: false, message: err.message });
+              }
+              element.remove();
             }
-            element.remove();
-          });
+          );
         });
         file.remove();
       }

@@ -1,5 +1,6 @@
 var crypto = require("crypto");
 var jwt = require("jsonwebtoken");
+var config = require("../config/config");
 const mongoose = require("mongoose");
 
 var userSchema = new mongoose.Schema({
@@ -118,7 +119,9 @@ userSchema.methods.generateJwt = function () {
       name: this.name,
       exp: parseInt(expiry.getTime() / 1000),
     },
-    "SHIVAMR"
+    config.jwt.secret, {
+      algorithm: ['HS256']
+    }
   ); // DO NOT KEEP YOUR SECRET IN THE CODE!
 };
 
