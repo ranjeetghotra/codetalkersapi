@@ -119,9 +119,7 @@ userSchema.methods.generateJwt = function () {
       name: this.name,
       exp: parseInt(expiry.getTime() / 1000),
     },
-    config.jwt.secret, {
-      algorithm: ['HS256']
-    }
+    config.jwt.secret
   ); // DO NOT KEEP YOUR SECRET IN THE CODE!
 };
 
