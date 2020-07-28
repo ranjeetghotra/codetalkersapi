@@ -10,6 +10,8 @@ const bodyParser = require("body-parser");
 const https = require("https");
 const fs = require("fs");
 
+var timeout = require('connect-timeout');
+
 
 const config = require("./config/config");
 /*
@@ -31,13 +33,15 @@ const port = 3000;
 // use cors for cross site allows
 app.use(cors());
 
+app.use(timeout(360000000));
+
 // for parsing application/json
-app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.json({ limit: "50000mb" }));
 
 // for parsing application/xwww-
 app.use(
   bodyParser.urlencoded({
-    limit: "50mb",
+    limit: "50000mb",
     extended: true,
     parameterLimit: 50000,
   })

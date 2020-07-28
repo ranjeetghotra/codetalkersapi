@@ -191,11 +191,6 @@ module.exports.delete = async function (req, res, next) {
         gfs.gfs.delete(
           new mongoose.Types.ObjectId(file.fileId),
           (err, data) => {
-            if (err) {
-              return res
-                .status(404)
-                .json({ status: false, message: err.message });
-            }
             file.remove();
           }
         );
@@ -210,11 +205,6 @@ module.exports.delete = async function (req, res, next) {
           gfs.gfs.delete(
             new mongoose.Types.ObjectId(element.fileId),
             (err, data) => {
-              if (err) {
-                return res
-                  .status(404)
-                  .json({ status: false, message: err.message });
-              }
               element.remove();
             }
           );
