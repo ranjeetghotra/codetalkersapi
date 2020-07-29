@@ -7,12 +7,10 @@ const archiver = require("archiver");
 const gfs = require("../config/gfs");
 const File = require("../models/file.model"); // File Model
 const config = require("../config/config");
-const { resolve } = require("path");
 // download file or Directory
 module.exports.file = async function (req, res, next) {
   try {
     var decoded = await jwt.verify(req.query.token, config.jwt.secret);
-    console.log(decoded);
     if (decoded) {
       file = await File.findOne({ user: decoded.user, _id: decoded.id });
       if (file) {

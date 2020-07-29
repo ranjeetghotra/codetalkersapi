@@ -1,10 +1,11 @@
 const File = require("../models/file.model"); // File Model
 const path = require("path");
 const fs = require("fs");
+const archiver = require("archiver");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const gfs = require("../config/gfs");
-const config = require("../config/config");
+const config = require("../config/config"); 
 // upload single file
 module.exports.upload = async function (req, res, next) {
   try {
@@ -133,34 +134,39 @@ module.exports.link = async function (req, res, next) {
         status: false,
         message: "no files exist",
       });
+    } else if (file.isFile) {
+      // get GridFs file
+      getFsFile(file.fileId).then((fsFile) => {
+        if (!fsFile) {
+          return res.status(404).json({
+            status: false,
+            message: "no files exist",
+          });
+        } else {
+          const secret = config.jwt.secret;
+          const token = jwt.sign(
+            { user: req.payload._id, id: req.params.id },
+            secret,
+            {
+              expiresIn: 1000 * 60 * 60,
+            }
+          );
+          const link =
+            config.baseUrl + "download/file?token=" + encodeURIComponent(token);
+          return res.json({ status: true, link });
+        }
+      });
     } else {
-      gfs.gfs
-        .find(new mongoose.Types.ObjectId(file.fileId))
-        .toArray((err, files) => {
-          if (!files || files.length === 0) {
-            return res.status(404).json({
-              status: false,
-              message: "no files exist",
-            });
-          } else {
-            const secret = config.jwt.secret;
-            const token = jwt.sign(
-              { user: req.payload._id, id: req.params.id },
-              secret,
-              {
-                expiresIn: 1000 * 60 * 60,
-              }
-            );
-            const link =
-              config.baseUrl +
-              "download/file?token=" +
-              encodeURIComponent(token);
-            return res.json({ status: true, link });
-          }
-        });
+      files = await File.find({
+        fileTree: file.fileTree + "/" + file.originalName,
+        user: req.payload._id,
+      });
+      generateZip([file._id]).then((res)=>{
+        res.send({});
+      })
     }
   } catch (err) {
-    console.log(err.message);
+    console.log(err);
     res.send({ status: false, message: err.message });
   }
 };
@@ -220,3 +226,27 @@ module.exports.delete = async function (req, res, next) {
     res.send({ status: false, message: err.message });
   }
 };
+
+async function getFsFile(fileId) {
+  return new Promise((resolve) => {
+    gfs.gfs.find(new mongoose.Types.ObjectId(fileId)).toArray((err, files) => {
+      if (!files || files.length === 0) {
+        resolve(null);
+      } else {
+        resolve(files[0]);
+      }
+    });
+  });
+}
+
+async function generateZip(fileIds)  {
+  let haveDir = true;
+  while(haveDir){
+   fileIds.forEach((id)=>{
+     
+   });
+  }
+  return new Promise((resolve)=>{
+    resolve('');
+  })
+}
