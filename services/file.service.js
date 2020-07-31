@@ -1,6 +1,5 @@
 const File = require("../models/file.model"); // File Model
 const TempFile = require("../models/tempFile.model"); // Temp File Model
-const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
 const archiver = require("archiver");

@@ -1,10 +1,6 @@
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
-const JsZip = require("jszip");
-const FileSaver = require("file-saver");
-const fs = require("fs");
 const path = require("path");
-const archiver = require("archiver");
 const gfs = require("../config/gfs");
 const File = require("../models/file.model"); // File Model
 const TempFile = require("../models/tempFile.model"); // Temp File Model

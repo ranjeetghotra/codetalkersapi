@@ -69,7 +69,7 @@ app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/auth", authController);
 app.use("/file", auth, fileController);
 app.use("/download", downloadController);
-app.use("/twitter", twitterController);
+// app.use("/twitter", twitterController);
 
 app.use(function (err, req, res, next) {
   if (err.name === 'UnauthorizedError') {

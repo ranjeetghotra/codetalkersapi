@@ -1,9 +1,6 @@
 const express = require("express");
 
 const router = express.Router();
-
-const GridFsStorage = require("multer-gridfs-storage");
-const multer = require('multer');
 const gfs = require("../config/gfs");
 
 const file = require("../services/file.service");
