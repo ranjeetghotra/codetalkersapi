@@ -17,6 +17,10 @@ var tempFileSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  length: {
+    type: Number,
+    default: 0
+  },
   createdAt: {
     type: Date,
     default: new Date(),

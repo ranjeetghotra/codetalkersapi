@@ -164,18 +164,17 @@ module.exports.link = async function (req, res, next) {
         user: req.payload._id,
       });
       generateZip([file], req.payload._id).then((zipFile) => {
-        console.log(zipFile);
         const secret = config.jwt.secret;
-          const token = jwt.sign(
-            { user: req.payload._id, id: zipFile._id },
-            secret,
-            {
-              expiresIn: 1000 * 60 * 60,
-            }
-          );
-          const link =
-            config.baseUrl + "download/files?token=" + encodeURIComponent(token);
-          return res.json({ status: true, link });
+        const token = jwt.sign(
+          { user: req.payload._id, id: zipFile._id },
+          secret,
+          {
+            expiresIn: 1000 * 60 * 60,
+          }
+        );
+        const link =
+          config.baseUrl + "download/files?token=" + encodeURIComponent(token);
+        return res.json({ status: true, link });
       });
     }
   } catch (err) {
@@ -187,14 +186,29 @@ module.exports.link = async function (req, res, next) {
 // Direct link for file
 module.exports.bulk = async function (req, res, next) {
   try {
+    var files = [];
     const ids = req.body.ids;
-    const secret = config.jwt.secret;
-    const token = jwt.sign({ user: req.payload._id, ids }, secret, {
-      expiresIn: 1000 * 60 * 60,
+    for (let key in ids) {
+      let id = ids[key];
+      let file = await File.findOne({ _id: id, user: req.payload._id });
+      if (file) {
+        files.push(file);
+      }
+    }
+    generateZip(files, req.payload._id).then((zipFile) => {
+      console.log(zipFile);
+      const secret = config.jwt.secret;
+      const token = jwt.sign(
+        { user: req.payload._id, id: zipFile._id },
+        secret,
+        {
+          expiresIn: 1000 * 60 * 60,
+        }
+      );
+      const link =
+        config.baseUrl + "download/files?token=" + encodeURIComponent(token);
+      return res.json({ status: true, link });
     });
-    const link =
-      config.baseUrl + "download/files?token=" + encodeURIComponent(token);
-    return res.json({ status: true, link });
   } catch (err) {
     console.log(err.message);
     res.send({ status: false, message: err.message });
@@ -261,13 +275,27 @@ async function generateZip(directories, user) {
     });
 
     let tempFile = TempFile({
-      originalName: 'Download.zip',
+      originalName: (directories.length ===  1 ? directories[0].originalName +  '.zip' : 'Download.zip'),
       filename: randomName,
       destination: 'temp',
       mimeType: 'application/zip',
       user
     });
     tempFile.save();
+
+    // listen for all archive data to be written
+    // 'close' event is fired only when a file descriptor is involved
+    output.on('close', function () {
+      tempFile.length = archive.pointer();
+      tempFile.save();
+    });
+
+    // This event is fired when the data source is drained no matter what was the data source.
+    // It is not part of this library but rather from the NodeJS Stream API.
+    // @see: https://nodejs.org/api/stream.html#stream_event_end
+    output.on('end', function () {
+      console.log('Data has been drained');
+    });
 
     // pipe archive data to the file
     archive.pipe(output);
@@ -299,7 +327,7 @@ async function generateZip(directories, user) {
                     });
                     readableStream.on("end", function () {
                       let buffer = Buffer.concat(bufferArray);
-                      archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + file.originalName });
+                      archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + '/'  + file.originalName });
                       resolve2();
                     });
                   } else {
@@ -314,7 +342,23 @@ async function generateZip(directories, user) {
             }
             resolve();
           } else {
-            resolve();
+            fsFile = await getFsFile(dir.fileId);
+            if (fsFile) {
+              let readableStream = gfs.gfs.openDownloadStreamByName(
+                fsFile.filename
+              );
+              let bufferArray = [];
+              readableStream.on("data", function (chunk) {
+                bufferArray.push(chunk);
+              });
+              readableStream.on("end", function () {
+                let buffer = Buffer.concat(bufferArray);
+                archive.append(buffer, { name: dir.originalName });
+                resolve();
+              });
+            } else {
+              resolve();
+            }
           }
         })
       };
@@ -323,8 +367,9 @@ async function generateZip(directories, user) {
     return new Promise((resolve) => {
       Promise.all(promiseArray).then(() => {
         Promise.all(promiseArray2).then(() => {
-          archive.finalize();
-          resolve(tempFile);
+          archive.finalize().then(() => {
+            resolve(tempFile);
+          });
         })
       })
     })
