@@ -1,6 +1,8 @@
 const File = require("../models/file.model"); // File Model
+const TempFile = require("../models/tempFile.model"); // Temp File Model
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const archiver = require("archiver");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
@@ -161,8 +163,22 @@ module.exports.link = async function (req, res, next) {
         fileTree: file.fileTree + "/" + file.originalName,
         user: req.payload._id,
       });
-      generateZip([file], req.payload._id).then(() => {
-        res.send({});
+      generateZip([file], req.payload._id).then((zipFile) => {
+        console.log(zipFile);
+        const secret = config.jwt.secret;
+          const token = jwt.sign(
+            { user: req.payload._id, id: zipFile._id },
+            secret,
+            {
+              expiresIn: 1000 * 60 * 60,
+            }
+          );
+          const link =
+            config.baseUrl + "download/files?token=" + encodeURIComponent(token);
+          return res.json({ status: true, link });
+        // res.set('Content-Type', zipFile.mimeType);
+        // res.set('Content-disposition', 'attachment; filename="' + file.originalName + '"');
+        // res.sendFile(path.resolve(file.destination + "/" + file.fileName));
       });
     }
   } catch (err) {
@@ -241,11 +257,20 @@ async function getFsFile(fileId) {
 
 async function generateZip(directories, user) {
   try {
-    var rootPath = '';
-    var output = fs.createWriteStream(__dirname + "/example2.zip");
+    let randomName = 'file_' + Date.now().toString(16) + '_' + crypto.randomBytes(16).toString('hex');
+    var output = fs.createWriteStream('temp/' + randomName);
     var archive = archiver("zip", {
       zlib: { level: 9 }, // Sets the compression level.
     });
+
+    let tempFile = TempFile({
+      originalName: 'Download.zip',
+      filename: randomName,
+      destination: 'temp',
+      mimeType: 'application/zip',
+      user
+    });
+    tempFile.save();
 
     // pipe archive data to the file
     archive.pipe(output);
@@ -258,16 +283,20 @@ async function generateZip(directories, user) {
     while (directories.length) {
       console.log('loop start');
       let directoriesNew = [];
-      directories.forEach((dir) => {
+      for (let i = 0; i < directories.length; i++) {
+        let dir = directories[i];
         console.log('each directories');
-        promiseArray.push(new Promise(async (resolve) => {
+        console.log(dir);
+        let promise3 = await new Promise(async (resolve) => {
           console.log('push promiseArray');
           if (!dir.isFile) {
+            console.log('isFile');
+            console.log((dir.fileTree + '/' + dir.originalName));
             let files = await File.find({ fileTree: (dir.fileTree + '/' + dir.originalName).replace(/^\/|\/$/g, ""), user });
-            console.log(files);
             console.log('files');
-            files.forEach(async (file) => {
-              await promiseArray2.push(new Promise(async (resolve2) => {
+            for (let fkey in files) {
+              let file = files[fkey];
+              promiseArray2.push(new Promise(async (resolve2) => {
                 if (file.isFile) {
                   fsFile = await getFsFile(file.fileId);
                   if (fsFile) {
@@ -280,45 +309,31 @@ async function generateZip(directories, user) {
                     });
                     readableStream.on("end", function () {
                       let buffer = Buffer.concat(bufferArray);
-                      archive.append(buffer, { name: file.originalName });
+                      console.log('buffer end');
+                      console.log(dir.relativePath);
+                      archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + file.originalName });
                       resolve2();
                     });
                   } else {
                     resolve2();
                   }
                 } else {
-                  directoriesNew.push(dir);
-                  console.log('directoriesNew.push(dir)');
+                  file.relativePath = (dir.relativePath ? dir.relativePath + '/' : '') + dir.originalName;
+                  directoriesNew.push(file);
+                  console.log('directoriesNew.push(file)');
+                  console.log(file);
                   resolve2();
                 }
               }));
-            })
+            }
             resolve();
           } else {
             resolve();
           }
-        }))
-      });
+        })
+      };
       directories = directoriesNew;
       console.log(directoriesNew);
-      /*fileIds.forEach((id) => {
-        let file = await File.findOne({ _id: req.params.id, user });
-        let fsFile = await getFsFile(file.fileId);
-        if (fsFile) {
-          let readableStream = gfs.gfs.openDownloadStreamByName(
-            fsFile.filename
-          );
-          let bufferArray = [];
-          readableStream.on("data", function (chunk) {
-            bufferArray.push(chunk);
-          });
-          readableStream.on("end", function () {
-            let buffer = Buffer.concat(bufferArray);
-            archive.append(buffer, { name: file.originalName });
-            // resolve();
-          });
-        }
-      }); */
       console.log('loop finish');
     }
     return new Promise((resolve) => {
@@ -327,7 +342,7 @@ async function generateZip(directories, user) {
         Promise.all(promiseArray2).then(() => {
           console.log('all promise2')
           archive.finalize();
-          resolve('');
+          resolve(tempFile);
         })
       })
     })

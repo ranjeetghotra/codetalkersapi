@@ -3,9 +3,11 @@ const mongoose = require("mongoose");
 const JsZip = require("jszip");
 const FileSaver = require("file-saver");
 const fs = require("fs");
+const path = require("path");
 const archiver = require("archiver");
 const gfs = require("../config/gfs");
 const File = require("../models/file.model"); // File Model
+const TempFile = require("../models/tempFile.model"); // Temp File Model
 const config = require("../config/config");
 // download file or Directory
 module.exports.file = async function (req, res, next) {
@@ -54,56 +56,29 @@ module.exports.file = async function (req, res, next) {
   }
 };
 
-// download file or Directory
+// download files or Directory
 module.exports.files = async function (req, res, next) {
   try {
     var decoded = await jwt.verify(req.query.token, config.jwt.secret);
-    if (decoded && Array.isArray(decoded.ids)) {
-      // create a file to stream archive data to.
-      var output = fs.createWriteStream(__dirname + "/example.zip");
-      var archive = archiver("zip", {
-        zlib: { level: 9 }, // Sets the compression level.
-      });
-
-      // pipe archive data to the file
-      archive.pipe(output);
-      const ids = decoded.ids;
-      const promiseArray = [];
-      console.log(ids);
-      ids.forEach(id => {
-        promiseArray.push(
-          new Promise(async (resolve) => {
-            let file = await File.findOne({ user: decoded.user, _id: id });
-            if (file) {
-              const gfsFile = gfs.gfs
-                .find(new mongoose.Types.ObjectId(file.fileId))
-                .toArray((err, files) => {
-                  if (!files || files.length === 0) {
-                  } else {
-                    let readableStream = gfs.gfs.openDownloadStreamByName(
-                      files[0].filename
-                    );
-                    let bufferArray = [];
-                    readableStream.on("data", function (chunk) {
-                      bufferArray.push(chunk);
-                    });
-                    readableStream.on("end", function () {
-                      var buffer = Buffer.concat(bufferArray);
-                      archive.append(buffer, { name: file.originalName });
-                      resolve();
-                    });
-                  }
-                });
-            }
-          })
-        );
-      });
-      Promise.all(promiseArray).then(() => {
-        archive.finalize();
-        res.send({status: true, message: "Zip created"});
-      });
+    console.log(decoded);
+    if (decoded) {
+      file = await TempFile.findOne({ user: decoded.user, _id: decoded.id });
+      console.log(file);
+      if (file) {
+        res.set('Content-Type', file.mimeType);
+        res.set('Content-disposition', 'attachment; filename="' + file.originalName + '"');
+        console.log(path.resolve(file.destination + "/" + file.filename));
+        res.sendFile(path.resolve(file.destination + "/" + file.filename));
+      } else {
+        return res.status(404).json({
+          status: false,
+          message: "no file exist",
+        });
+      }
     }
   } catch (err) {
+    // err
+    console.log(err);
     res.send({ status: false, message: err.message });
   }
 };
