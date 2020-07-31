@@ -176,9 +176,6 @@ module.exports.link = async function (req, res, next) {
           const link =
             config.baseUrl + "download/files?token=" + encodeURIComponent(token);
           return res.json({ status: true, link });
-        // res.set('Content-Type', zipFile.mimeType);
-        // res.set('Content-disposition', 'attachment; filename="' + file.originalName + '"');
-        // res.sendFile(path.resolve(file.destination + "/" + file.fileName));
       });
     }
   } catch (err) {
@@ -281,19 +278,12 @@ async function generateZip(directories, user) {
 
     // while all directories not processod
     while (directories.length) {
-      console.log('loop start');
       let directoriesNew = [];
       for (let i = 0; i < directories.length; i++) {
         let dir = directories[i];
-        console.log('each directories');
-        console.log(dir);
         let promise3 = await new Promise(async (resolve) => {
-          console.log('push promiseArray');
           if (!dir.isFile) {
-            console.log('isFile');
-            console.log((dir.fileTree + '/' + dir.originalName));
             let files = await File.find({ fileTree: (dir.fileTree + '/' + dir.originalName).replace(/^\/|\/$/g, ""), user });
-            console.log('files');
             for (let fkey in files) {
               let file = files[fkey];
               promiseArray2.push(new Promise(async (resolve2) => {
@@ -309,8 +299,6 @@ async function generateZip(directories, user) {
                     });
                     readableStream.on("end", function () {
                       let buffer = Buffer.concat(bufferArray);
-                      console.log('buffer end');
-                      console.log(dir.relativePath);
                       archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + file.originalName });
                       resolve2();
                     });
@@ -320,8 +308,6 @@ async function generateZip(directories, user) {
                 } else {
                   file.relativePath = (dir.relativePath ? dir.relativePath + '/' : '') + dir.originalName;
                   directoriesNew.push(file);
-                  console.log('directoriesNew.push(file)');
-                  console.log(file);
                   resolve2();
                 }
               }));
@@ -333,14 +319,10 @@ async function generateZip(directories, user) {
         })
       };
       directories = directoriesNew;
-      console.log(directoriesNew);
-      console.log('loop finish');
     }
     return new Promise((resolve) => {
       Promise.all(promiseArray).then(() => {
-        console.log('all promise')
         Promise.all(promiseArray2).then(() => {
-          console.log('all promise2')
           archive.finalize();
           resolve(tempFile);
         })
