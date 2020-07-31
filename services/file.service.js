@@ -5,7 +5,7 @@ const archiver = require("archiver");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const gfs = require("../config/gfs");
-const config = require("../config/config"); 
+const config = require("../config/config");
 // upload single file
 module.exports.upload = async function (req, res, next) {
   try {
@@ -161,9 +161,9 @@ module.exports.link = async function (req, res, next) {
         fileTree: file.fileTree + "/" + file.originalName,
         user: req.payload._id,
       });
-      generateZip([file._id]).then((res)=>{
+      generateZip([file], req.payload._id).then(() => {
         res.send({});
-      })
+      });
     }
   } catch (err) {
     console.log(err);
@@ -239,14 +239,99 @@ async function getFsFile(fileId) {
   });
 }
 
-async function generateZip(fileIds)  {
-  let haveDir = true;
-  while(haveDir){
-   fileIds.forEach((id)=>{
-     
-   });
+async function generateZip(directories, user) {
+  try {
+    var rootPath = '';
+    var output = fs.createWriteStream(__dirname + "/example2.zip");
+    var archive = archiver("zip", {
+      zlib: { level: 9 }, // Sets the compression level.
+    });
+
+    // pipe archive data to the file
+    archive.pipe(output);
+
+    // var promiseArrayFirst = []
+    var promiseArray = [];
+    var promiseArray2 = [];
+
+    // while all directories not processod
+    while (directories.length) {
+      console.log('loop start');
+      let directoriesNew = [];
+      directories.forEach((dir) => {
+        console.log('each directories');
+        promiseArray.push(new Promise(async (resolve) => {
+          console.log('push promiseArray');
+          if (!dir.isFile) {
+            let files = await File.find({ fileTree: (dir.fileTree + '/' + dir.originalName).replace(/^\/|\/$/g, ""), user });
+            console.log(files);
+            console.log('files');
+            files.forEach(async (file) => {
+              await promiseArray2.push(new Promise(async (resolve2) => {
+                if (file.isFile) {
+                  fsFile = await getFsFile(file.fileId);
+                  if (fsFile) {
+                    let readableStream = gfs.gfs.openDownloadStreamByName(
+                      fsFile.filename
+                    );
+                    let bufferArray = [];
+                    readableStream.on("data", function (chunk) {
+                      bufferArray.push(chunk);
+                    });
+                    readableStream.on("end", function () {
+                      let buffer = Buffer.concat(bufferArray);
+                      archive.append(buffer, { name: file.originalName });
+                      resolve2();
+                    });
+                  } else {
+                    resolve2();
+                  }
+                } else {
+                  directoriesNew.push(dir);
+                  console.log('directoriesNew.push(dir)');
+                  resolve2();
+                }
+              }));
+            })
+            resolve();
+          } else {
+            resolve();
+          }
+        }))
+      });
+      directories = directoriesNew;
+      console.log(directoriesNew);
+      /*fileIds.forEach((id) => {
+        let file = await File.findOne({ _id: req.params.id, user });
+        let fsFile = await getFsFile(file.fileId);
+        if (fsFile) {
+          let readableStream = gfs.gfs.openDownloadStreamByName(
+            fsFile.filename
+          );
+          let bufferArray = [];
+          readableStream.on("data", function (chunk) {
+            bufferArray.push(chunk);
+          });
+          readableStream.on("end", function () {
+            let buffer = Buffer.concat(bufferArray);
+            archive.append(buffer, { name: file.originalName });
+            // resolve();
+          });
+        }
+      }); */
+      console.log('loop finish');
+    }
+    return new Promise((resolve) => {
+      Promise.all(promiseArray).then(() => {
+        console.log('all promise')
+        Promise.all(promiseArray2).then(() => {
+          console.log('all promise2')
+          archive.finalize();
+          resolve('');
+        })
+      })
+    })
+  } catch (err) {
+    console.log(err);
   }
-  return new Promise((resolve)=>{
-    resolve('');
-  })
 }
