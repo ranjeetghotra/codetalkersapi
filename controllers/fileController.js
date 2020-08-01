@@ -13,4 +13,5 @@ router.post("/link/:id", file.link);
 router.post("/bulk", file.bulk);
 router.post("/type", file.type);
 router.post("/delete/:id", file.delete);
+router.get("/storage", file.storage);
 module.exports = router;

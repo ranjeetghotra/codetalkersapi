@@ -47,6 +47,7 @@ module.exports.upload = async function (req, res, next) {
       file = new File({
         user: req.payload._id,
         originalName: req.file.originalname,
+        length: req.file.size,
         fileId: fsFile[0]._id,
         filename: fsFile[0].filename,
         type: req.file.mimetype.split("/")[0],
@@ -253,6 +254,21 @@ module.exports.delete = async function (req, res, next) {
   }
 };
 
+// get storage info
+module.exports.storage = async function (req, res, next) {
+  try {
+    let usedStorage = 0;
+    files = await File.find({ user: req.payload._id, isFile: true });
+    files.forEach(file => {
+      usedStorage += file.length ?? 0;
+    });
+    res.send({ status: true, data: { used: usedStorage, total: -1 } });
+  } catch (err) {
+    console.log(err.message);
+    res.send({ status: false, message: err.message });
+  }
+}
+
 async function getFsFile(fileId) {
   return new Promise((resolve) => {
     gfs.gfs.find(new mongoose.Types.ObjectId(fileId)).toArray((err, files) => {
@@ -274,7 +290,7 @@ async function generateZip(directories, user) {
     });
 
     let tempFile = TempFile({
-      originalName: (directories.length ===  1 ? directories[0].originalName +  '.zip' : 'Download.zip'),
+      originalName: (directories.length === 1 ? directories[0].originalName + '.zip' : 'Download.zip'),
       filename: randomName,
       destination: 'temp',
       mimeType: 'application/zip',
@@ -326,7 +342,7 @@ async function generateZip(directories, user) {
                     });
                     readableStream.on("end", function () {
                       let buffer = Buffer.concat(bufferArray);
-                      archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + '/'  + file.originalName });
+                      archive.append(buffer, { name: (dir.relativePath ?? '') + '/' + dir.originalName + '/' + file.originalName });
                       resolve2();
                     });
                   } else {
@@ -376,3 +392,5 @@ async function generateZip(directories, user) {
     console.log(err);
   }
 }
+
+
