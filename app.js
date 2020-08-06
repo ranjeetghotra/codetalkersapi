@@ -22,10 +22,11 @@ const options = {
 */
 
 // Load Controllers
-const authController = require("./controllers/authController.js");
-const fileController = require("./controllers/fileController.js");
-const downloadController = require("./controllers/downloadController.js");
-const twitterController = require("./controllers/twittercontroller");
+const authController = require("./controllers/authController");
+const fileController = require("./controllers/fileController");
+const downloadController = require("./controllers/downloadController");
+const adminController = require("./controllers/adminController");
+// const twitterController = require("./controllers/twittercontroller");
 
 const app = express();
 const port = 3000;
@@ -68,12 +69,13 @@ require("./config/passport");
 app.get("/", (req, res) => res.send("Hello World!"));
 app.use("/auth", authController);
 app.use("/file", auth, fileController);
+app.use("/admin", auth, adminController);
 app.use("/download", downloadController);
 // app.use("/twitter", twitterController);
 
 app.use(function (err, req, res, next) {
   if (err.name === 'UnauthorizedError') {
-    res.send({status: false, tokenInvalid: true, message: 'invalid token...'});
+    res.send({ status: false, tokenInvalid: true, message: 'invalid token...' });
   }
 });
 // Start Application

@@ -44,15 +44,12 @@ var userSchema = new mongoose.Schema({
   },
   googleId: {
     type: String,
-    unique: true
   },
   facebookId: {
     type: String,
-    unique: true
   },
   twitterId: {
     type: String,
-    unique: true
   },
   registerationDateTime: {
     type: Date,
@@ -117,6 +114,7 @@ userSchema.methods.generateJwt = function () {
       _id: this._id,
       email: this.email,
       name: this.name,
+      permission: this.permission,
       exp: parseInt(expiry.getTime() / 1000),
     },
     config.jwt.secret

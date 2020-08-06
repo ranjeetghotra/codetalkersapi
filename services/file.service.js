@@ -1,4 +1,5 @@
 const File = require("../models/file.model"); // File Model
+const User = require("../models/user.model"); // User Model
 const TempFile = require("../models/tempFile.model"); // Temp File Model
 const fs = require("fs");
 const crypto = require("crypto");
@@ -7,6 +8,7 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const gfs = require("../config/gfs");
 const config = require("../config/config");
+const messageService = require("./message.service"); // Message service
 // upload single file
 module.exports.upload = async function (req, res, next) {
   try {
@@ -78,9 +80,13 @@ module.exports.recent = async function (req, res, next) {
 // Recent modified files
 module.exports.explore = async function (req, res, next) {
   let path = req.body.path ? req.body.path : "";
+  let user = req.payload._id;
   fileTree = path.replace(/^\/|\/$/g, "");
   try {
-    exploreData = await File.find({ user: req.payload._id, fileTree }).sort({
+    if (req.payload.permission === 2 && req.body.user) {
+      user = req.body.user;
+    }
+    exploreData = await File.find({ user, fileTree }).sort({
       originalName: 1,
     });
     res.send({ status: true, data: exploreData });
@@ -129,7 +135,13 @@ module.exports.type = async function (req, res, next) {
 // Direct link for file
 module.exports.link = async function (req, res, next) {
   try {
-    file = await File.findOne({ _id: req.params.id, user: req.payload._id }); // Find file by id
+    let mongoQuery = {
+      _id: req.params.id
+    }
+    if (req.payload.permission !== 2) {
+      mongoQuery.user = req.payload._id
+    }
+    file = await File.findOne(mongoQuery); // Find file by id
     if (!file) {
       // check if file exist or not
       return res.status(404).json({
@@ -147,7 +159,7 @@ module.exports.link = async function (req, res, next) {
         } else {
           const secret = config.jwt.secret;
           const token = jwt.sign(
-            { user: req.payload._id, id: req.params.id },
+            { user: file.user, id: req.params.id },
             secret,
             {
               expiresIn: 1000 * 60 * 60,
@@ -166,7 +178,7 @@ module.exports.link = async function (req, res, next) {
       generateZip([file], req.payload._id).then((zipFile) => {
         const secret = config.jwt.secret;
         const token = jwt.sign(
-          { user: req.payload._id, id: zipFile._id },
+          { user: zipFile.user, id: zipFile._id },
           secret,
           {
             expiresIn: 1000 * 60 * 60,
@@ -189,17 +201,19 @@ module.exports.bulk = async function (req, res, next) {
     var files = [];
     const ids = req.body.ids;
     for (let key in ids) {
-      let id = ids[key];
-      let file = await File.findOne({ _id: id, user: req.payload._id });
+      let mongoQuery = { _id: ids[key] };
+      if (req.payload.permission !== 2) {
+        mongoQuery.user = req.payload._id;
+      }
+      let file = await File.findOne();
       if (file) {
         files.push(file);
       }
     }
     generateZip(files, req.payload._id).then((zipFile) => {
-      console.log(zipFile);
       const secret = config.jwt.secret;
       const token = jwt.sign(
-        { user: req.payload._id, id: zipFile._id },
+        { user: zipFile.user, id: zipFile._id },
         secret,
         {
           expiresIn: 1000 * 60 * 60,
@@ -215,10 +229,41 @@ module.exports.bulk = async function (req, res, next) {
   }
 };
 
+// Email files
+module.exports.email = async function (req, res, next) {
+  try {
+    var files = [];
+    var emails = req.body.emails ?? [];
+    const ids = req.body.ids;
+    for (let key in ids) {
+      let id = ids[key];
+      let file = await File.findOne({ _id: id, user: req.payload._id });
+      if (file) {
+        files.push(file);
+      }
+    }
+    generateZip(files, req.payload._id).then((zipFile) => {
+      emails.forEach(email => {
+        messageService.sendMail(email, 'test', 'test  subject', { filename: zipFile.originalName, path: zipFile.destination + '/' + zipFile.filename });
+      });
+      return res.json({ status: true });
+    });
+  } catch (err) {
+    console.log(err.message);
+    res.send({ status: false, message: err.message });
+  }
+};
+
 // delete file or Directory
 module.exports.delete = async function (req, res, next) {
   try {
-    file = await File.findById({ user: req.payload._id, _id: req.params.id });
+    let mongoQuery = {
+      _id: req.params.id
+    }
+    if (req.payload.permission !== 2) {
+      mongoQuery.user = req.payload._id
+    }
+    file = await File.findById(mongoQuery);
     if (file) {
       if (file.isFile) {
         gfs.gfs.delete(
@@ -281,7 +326,7 @@ async function getFsFile(fileId) {
   });
 }
 
-async function generateZip(directories, user) {
+async function generateZip(directories, userId) {
   try {
     let randomName = 'file_' + Date.now().toString(16) + '_' + crypto.randomBytes(16).toString('hex');
     var output = fs.createWriteStream('temp/' + randomName);
@@ -294,7 +339,7 @@ async function generateZip(directories, user) {
       filename: randomName,
       destination: 'temp',
       mimeType: 'application/zip',
-      user
+      user: userId
     });
     tempFile.save();
 
@@ -319,6 +364,8 @@ async function generateZip(directories, user) {
     var promiseArray = [];
     var promiseArray2 = [];
 
+    const user = await User.findById(userId);
+
     // while all directories not processod
     while (directories.length) {
       let directoriesNew = [];
@@ -326,7 +373,11 @@ async function generateZip(directories, user) {
         let dir = directories[i];
         let promise3 = await new Promise(async (resolve) => {
           if (!dir.isFile) {
-            let files = await File.find({ fileTree: (dir.fileTree + '/' + dir.originalName).replace(/^\/|\/$/g, ""), user });
+            let mongoQuery = { fileTree: (dir.fileTree + '/' + dir.originalName).replace(/^\/|\/$/g, "") };
+            if (user.permission !== 2) {
+              mongoQuery.user = userId;
+            }
+            let files = await File.find(mongoQuery);
             for (let fkey in files) {
               let file = files[fkey];
               promiseArray2.push(new Promise(async (resolve2) => {

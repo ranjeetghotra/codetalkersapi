@@ -36,7 +36,7 @@ function sendSMS(phone, message) {
   });
 }
 
-function sendMail(to, message, subject = "CodeTalkers") {
+function sendMail(to, message, subject = "CodeTalkers",  attachments = false) {
   // Nodemailer email transporter
   let transporter = nodeMailer.createTransport({
     // Mail hoster
@@ -56,6 +56,9 @@ function sendMail(to, message, subject = "CodeTalkers") {
     subject: subject,
     html: message, // plain text body
   };
+  if(attachments){
+    mailOptions.attachments = attachments;
+  }
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       return;

@@ -53,10 +53,12 @@ module.exports.socialLogin = async function (req, res) {
       user = await User.findOne({
         $or: [{ googleId: req.body.idToken }, { email: req.body.email }],
       });
+      console.log(user);
     } else if (loginProvider == "facebook") {
       user = await User.findOne({
         $or: [{ facebookId: req.body.idToken }, { email: req.body.email }],
       });
+      console.log(user);
     } else if (loginProvider == "twitter") {
       user = await User.findOne({
         $or: [{ twitterId: req.body.idToken }, { email: req.body.email }],
